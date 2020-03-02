@@ -6,14 +6,15 @@ const int digitalpin4 = 4;
 const int digitalpin5 = 5;
 const int digitalpin6 = 6;
 const int digitalpin7 = 7;
-const int eoc = 8;
-const int wr = 9;
-const int start = 10;
+const int eoc = 9;
+const int wr = 10;
+const int start = 8;
 const int cs = 11;
 float value;
 float voltage_value;
 float original_value;
-int start_count = 0;
+int start_count = 0, wr_flag = 0;
+int start_limit = 100, wr_limit = 20, wr_done;
 //storage variables
 boolean toggle0 = 0;
 boolean toggle1 = 0;
@@ -87,15 +88,23 @@ ISR(TIMER0_COMPA_vect){//timer0 interrupt 2kHz toggles pin 8
   if (toggle0){
     digitalWrite(cs,HIGH);
     toggle0 = 0;
-    if(start_count == 100)
+    if(start_count == start_limit)
     {digitalWrite(start, HIGH);
      start_count = 0;
     }
-    if(digitalRead(eoc) == HIGH)
-    {digitalWrite(wr, HIGH);
-     ++wr_count;
+    if(digitalRead(eoc) == LOW)
+     {wr_done = 0;
+      wr_flag = 0;
+     }
+    if(digitalRead(eoc) == HIGH && wr_flag != wr_limit && wr_done == 0)
+    { digitalWrite(wr, HIGH);
+      wr_ready = 1;
+      ++wr_flag;      
     }
-    
+    else
+     { wr_done = 1;
+      digitalWrite(wr, LOW);
+     }
   }
   else{
     digitalWrite(cs,LOW);
@@ -103,12 +112,7 @@ ISR(TIMER0_COMPA_vect){//timer0 interrupt 2kHz toggles pin 8
     if(start_count == 0)
      digitalWrite(start, LOW);
     ++start_count;
-    if(wr_count == 5)
-    {
-      wr_ready = 1;
-      wr_count = 0;
-      digitalWrite(wr, LOW);
-    }
+   
   }
 }
 //
@@ -137,8 +141,8 @@ ISR(TIMER0_COMPA_vect){//timer0 interrupt 2kHz toggles pin 8
 //}
 void loop() {
   // put your main code here, to run repeatedly:
-//if(wr_ready == 1)
-//{
+if(wr_ready == 1)
+{
 if(digitalRead(digitalpin0) == HIGH)
 a0 = 1;
 else
@@ -190,5 +194,5 @@ value=(a7*128)+(a6*64)+(a5*32)+(a4*16)+(a3*8)+(a2*4)+(a1*2)+(a0);
 voltage_value = (value*2);
 Serial.println(voltage_value);
 wr_ready = 0;
-//}
+}
 }
